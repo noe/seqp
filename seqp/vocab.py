@@ -154,7 +154,7 @@ class VocabularyCollector(object):
         symbols = [symbol for symbol, count in most_common_symbols]
 
         if sorting_key is not None:
-            symbols = sorted(symbols, sorting_key)
+            symbols = sorted(symbols, key=sorting_key)
 
         symbols = special_symbols + symbols
         return Vocabulary(symbols, pad_id=0, eos_id=1, unk_id=2)
