@@ -133,6 +133,7 @@ class VocabularyCollector(object):
                     unk_symbol: str=DEFAULT_UNK,
                     pad_symbol: str=DEFAULT_PAD,
                     eos_symbol: str=DEFAULT_EOS,
+                    sorting_key=None,
                     ) -> Vocabulary:
         """
         Creates a Vocabulary from the collected symbols.
@@ -141,6 +142,8 @@ class VocabularyCollector(object):
         :param unk_symbol: Symbol to use for UNK tokens.
         :param pad_symbol: PAD symbol.
         :param eos_symbol: End-of-sequence symbol.
+        :param sorting_key: key to sort the symbols, or None if order
+                            is not important.
         :return: The resulting Vocabulary.
         """
         counter = Counter(self.symbol_count)
@@ -149,6 +152,10 @@ class VocabularyCollector(object):
                        else max_num_symbols - len(special_symbols))
         most_common_symbols = counter.most_common(num_symbols)
         symbols = [symbol for symbol, count in most_common_symbols]
+
+        if sorting_key is not None:
+            symbols = sorted(symbols, sorting_key)
+
         symbols = special_symbols + symbols
         return Vocabulary(symbols, pad_id=0, eos_id=1, unk_id=2)
 
