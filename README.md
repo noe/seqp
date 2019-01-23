@@ -13,6 +13,16 @@ and save the sequences of vector representations in binary format once,
 and in training you just load them back without having to encode them
 every time.
 
+What does `seqp` do or doesn't do?:
+
+- Seqp gives you padded + bucketed iterated data batching.
+- Seqp does not hold the full (potentially huge) dataset in memory.
+- Seqp helps you only process your data once, then persist it and
+  then load it back any number of times you want.
+- Seqp integrates with other frameworks (if present) to provide
+  synergies.
+
+
 This library was created due to the fact that for each different deep
 learning framework you have to use a different approach for that: TF records
 for tensorflow (+ tensor2tensor), custom binary format for for fairseq, etc.
