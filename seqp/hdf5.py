@@ -137,7 +137,7 @@ class Hdf5RecordReader(RecordReader):
     def retrieve(self, index: int) -> np.ndarray:
         """ See super class docstring. """
         file_name = self.index_to_filename.get(index, None)
-        return self.hdf5_stores[file_name][index] if file_name else None
+        return self.hdf5_stores[file_name][str(index)] if file_name else None
 
     def num_records(self) -> int:
         """ See super class docstring. """
