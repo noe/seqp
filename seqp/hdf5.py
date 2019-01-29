@@ -91,6 +91,8 @@ class Hdf5RecordReader(RecordReader):
         :param min_length: Minimum sequence length threshold.
         :param max_length: Maximum sequence length threshold.
         """
+        if isinstance(file_names, str):
+            file_names = [file_names]
         self.file_names = file_names
         self.hdf5_stores = {file_name: h5py.File(file_name, 'r')
                             for file_name in file_names}
