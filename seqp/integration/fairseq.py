@@ -16,6 +16,8 @@ except ImportError:
     assert False, "Fairseq is needed for seqp integration with fairseq!"
 
 
+import numpy as np
+
 from ..record import RecordReader
 from ..vocab import Vocabulary
 
@@ -32,7 +34,10 @@ class MonolingualDataset(FairseqDataset):
         self.left_pad = left_pad
 
     def __getitem__(self, index):
-        return self.reader.retrieve(index)
+        elem = self.reader.retrieve(index)
+        if isinstance(elem, np.ndarray):
+            elem = torch.from_numpy(elem)
+        return elem
 
     def __len__(self):
         return self.reader.num_records()
@@ -99,5 +104,9 @@ def vocab_to_dictionary(vocab: Vocabulary) -> Dictionary:
     for symbol in vocab.idx2symbol:
         unknown_frequency = 1   # frequency info is not available
         dictionary.add_symbol(symbol, unknown_frequency)
+
+    dictionary.pad_index = vocab.pad_id
+    dictionary.eos_index = vocab.eos_id
+    dictionary.unk_index = vocab.unk_id
 
     return dictionary

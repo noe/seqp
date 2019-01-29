@@ -20,7 +20,6 @@ class Hdf5RecordWriter(RecordWriter):
     """
     Implementation of RecordWriter that persists the records in an HDF5 file.
     """
-
     def write(self,
               encoded_records: Iterable[Tuple[int, np.ndarray]],
               output_file: str,
@@ -44,7 +43,7 @@ class Hdf5RecordWriter(RecordWriter):
                         f.create_dataset(key, data=h5py.Empty("f"))
                         length = 0
                     else:
-                        f.create_dataset(key, encoded.shape, dtype='float32', data=encoded)
+                        f.create_dataset(key, encoded.shape, dtype=encoded.dtype, data=encoded)
                         length = encoded.shape[0]
 
                     index_to_length[key] = length
@@ -71,6 +70,10 @@ class Hdf5RecordWriter(RecordWriter):
                 os.remove(output_file)
 
             return remaining_records
+
+
+def _to_numpy(hdf5_dataset):
+    return hdf5_dataset[:]
 
 
 class Hdf5RecordReader(RecordReader):
@@ -137,7 +140,8 @@ class Hdf5RecordReader(RecordReader):
     def retrieve(self, index: int) -> np.ndarray:
         """ See super class docstring. """
         file_name = self.index_to_filename.get(index, None)
-        return self.hdf5_stores[file_name][str(index)] if file_name else None
+        return (_to_numpy(self.hdf5_stores[file_name][str(index)])
+                if file_name else None)
 
     def num_records(self) -> int:
         """ See super class docstring. """
