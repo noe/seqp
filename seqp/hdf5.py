@@ -120,13 +120,6 @@ class Hdf5RecordReader(RecordReader):
             hdf5_store.close()
         self.hdf5_stores.clear()
 
-    def __del__(self):
-        """
-        Destructor of the Hdf5RecordReader. Closes all HDF5 files.
-        :return: None
-        """
-        self.close()
-
     def indexes(self) -> Iterable[int]:
         """ See super class docstring. """
         yield from self.index_to_filename.keys()
