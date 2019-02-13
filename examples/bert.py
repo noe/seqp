@@ -15,12 +15,11 @@ import numpy as np
 import sys
 import torch
 import tqdm
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Iterable, Callable
 
 from pytorch_pretrained_bert import BertTokenizer, BertForMaskedLM
 
-from seqp.record import write_shards
-from seqp.encoding import record_generator
+from seqp.record import RecordWriter, ShardedWriter
 from seqp.hdf5 import Hdf5RecordWriter
 from seqp.encoding import TextCodec
 from seqp.util import count_lines
@@ -70,6 +69,19 @@ def show_sentence(key, sentence):
     print("{}: {}".format(key, sentence))
 
 
+def write_records(sentences: Iterable[str],
+                  codec: TextCodec,
+                  writer: RecordWriter,
+                  progress: Callable[[], None] = None):
+    for idx, sentence in enumerate(sentences):
+        sentence = sentence.strip("\r\n ")
+        tokens = codec.tokenize(sentence)
+        encoded = codec.encode(tokens)
+        writer.write(idx, encoded)
+        if progress is not None:
+            progress()
+
+
 def main():
     parser = argparse.ArgumentParser("BERT encoder into HDF5")
     parser.add_argument('--input', required=False)
@@ -82,24 +94,18 @@ def main():
     output_file_template = args.output + "_{:05d}.hdf5"
     embedder = BertInterface(use_gpu=True)
 
+    writer = ShardedWriter(Hdf5RecordWriter, output_file_template, args.max_records)
+
     if args.input:
         total_sentences = count_lines(args.input)
         with open(args.input, 'r') as input_sentences:
             with tqdm.tqdm(total=total_sentences, ncols=100, leave=False, unit='segments') as pbar:
-                def progress(s, k):
+                def progress():
                     pbar.update(1)
 
-                records = record_generator(embedder, input_sentences, progress)
-                write_shards(Hdf5RecordWriter(),
-                             output_file_template,
-                             records,
-                             args.max_records)
+                write_records(input_sentences, embedder, writer, progress)
     else:
-        records = record_generator(embedder, sys.stdin, show_sentence)
-        write_shards(Hdf5RecordWriter(),
-                     output_file_template,
-                     records,
-                     args.max_records)
+        write_records(sys.stdin, embedder, writer)
 
 
 if __name__ == '__main__':

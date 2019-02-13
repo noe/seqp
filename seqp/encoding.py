@@ -50,26 +50,3 @@ class TextCodec:
         :return: Detokenized text string.
         """
         raise NotImplementedError
-
-
-def record_generator(codec: TextCodec,
-                     sentence_generator: Iterable[str],
-                     progress: Callable[[int, str], None]=None):
-    """
-    Utility function to turn a text generator into a record generator
-    by means of a TextCodec.
-    :param codec: Codec to use to encode the text.
-    :param sentence_generator: generator of the text to encode.
-    :param progress: callable to report progress.
-    :return: Record generator (useful for RecordWriter's).
-    """
-    if progress is None:
-        def progress(_1, _2):
-            pass
-
-    for index, sentence in enumerate(sentence_generator):
-        sentence = sentence.strip()
-        tokens = codec.tokenize(sentence)
-        encoded = codec.encode(tokens)
-        progress(index, sentence)
-        yield index, encoded

@@ -64,52 +64,111 @@ class RecordReader:
 class RecordWriter(object):
     """
     Abstract class with the contract of a record writer, which
-    basically writes a bunch of indexed sequences to a file,
-    together with a metadata dictionary.
+    basically writes indexed sequences, probably to a file,
+    together with a metadata dictionary. This class is a
+    context manager so that it can properly close and release
+    any resources at scope exit.
+
+    Subclasses should allocate any needed resource in the
+    constructor and release them in method `close`, and implement
+    method `write`.
     """
 
-    def write(self,
-              encoded_records: Iterable[Tuple[int, np.ndarray]],
-              output_file: str,
-              max_records: Optional[int]=None,
-              metadata: Optional[Dict[str, str]]=None) -> bool:
+    def __init__(self):
+        """Constructor. """
+        self.metadata = dict()
+
+    def __enter__(self) -> "RecordWriter":
         """
-        Writes the given records to output file.
-        :param encoded_records: generator of tuples (index, numpy array) to
-                                be written to file.
-        :param output_file: file where to write the records.
-        :param max_records: maximum number of records to write to output_file.
-        :param metadata: metadata stored along with the sequences.
-        :return: True if max_records was reached and therefore there can
-                 be pending sequences in encoded_records; False otherwise.
+        Invoked when entering the context scope.
+        :return: returns itself so that close is invoked at the scope exit.
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Invoked at with block scope exit. Calls self.close()
+        in order to release any resource in use.
+        :param exc_type:
+        :param exc_val:
+        :param exc_tb:
+        :return: None
+        """
+        self.close()
+
+    def close(self):
+        """
+        Closes any resource in use (e.g. open files).
+        :return: None
+        """
+        pass
+
+    def add_metadata(self, metadata: Dict[str, str]) -> None:
+        """
+        Attaches a metadata dictionary to the records.
+        :param metadata: Metadata to be attached to the records.
+        :return: None
+        """
+        self.metadata.update(metadata)
+
+    def write(self, idx: int, record: Optional[np.ndarray]) -> None:
+        """
+        Writes a record to the underlying storage.
+        :param idx: Index of the record. Must be unique.
+        :param record: Record to be stored.
+        :return: None
         """
         raise NotImplementedError
 
 
-def write_shards(writer: RecordWriter,
+class ShardedWriter(RecordWriter):
+    """
+    Wrapper RecordWriter to have automatic sharding. Assumes the
+    underlying writer is file-based and that it receives an
+    argument specifying the file name in its constructor.
+    """
+
+    def __init__(self,
+                 writer_class,
                  output_file_template: str,
-                 encoded_records: Iterable[Tuple[int, np.ndarray]],
                  max_records_per_shard: int,
-                 metadata: Optional[Dict[str, str]]=None):
-    """
-    Writes the given encoded record in several files.
-    :param writer: RecordWriter to use.
-    :param output_file_template: template for the output file names. It
-                                 is used like `output_file_template.format(5)`
-                                 to obtain each file name.
-    :param encoded_records: generator of records.
-    :param max_records_per_shard: maximum records per shard.
-    :param metadata: dictionary with metadata that will be included in
-                     each file.
-    :return: None
-    """
-    assert output_file_template.format(1) != output_file_template
-    remaining_records = True
-    output_file_index = 1
-    while remaining_records:
-        output_file = output_file_template.format(output_file_index)
-        remaining_records = writer.write(encoded_records,
-                                         output_file,
-                                         max_records_per_shard,
-                                         metadata=metadata)
-        output_file_index += 1
+                 output_file_param='output_file',
+                 **kwargs):
+        """
+        Constructor.
+        :param writer_class: Class of the actual writer to use.
+        :param output_file_template: template of the file names. Internally
+               it will be used with `format` to get the actual file name,
+               passing a shard index as argument.
+        :param max_records_per_shard: Maximum number of records in a
+               single shard file.
+        :param output_file_param: name of the parameter of writer_class
+               constructor that specifies the file name.
+        :param kwargs: other arguments needed by writer_class constructor.
+        """
+        super().__init__()
+        self.kwargs = dict(kwargs)
+        self.output_file_template = output_file_template
+        self.max_records_per_shard = max_records_per_shard
+        self.current_output_file_idx = 1
+        self.writer_class = writer_class
+        self.output_file_param = output_file_param
+        self.kwargs[output_file_param] = output_file_template.format(1)
+        self.current_writer = writer_class(**kwargs)
+        self.current_records = 0
+
+    def close(self):
+        self.current_writer.close()
+
+    def _next_writer(self):
+        self.current_writer.close()
+        self.current_records = 0
+        self.current_output_file_idx += 1
+        shard_name = self.output_file_template.format(self.current_output_file_idx)
+        self.kwargs[self.output_file_param] = shard_name
+        self.current_writer = self.writer_class()
+
+    def write(self, idx: int, record: Optional[np.ndarray]):
+        if self.current_records >= self.max_records_per_shard:
+            self._next_writer()
+        self.current_writer.write(idx, record)

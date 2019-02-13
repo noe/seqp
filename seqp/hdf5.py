@@ -20,56 +20,46 @@ class Hdf5RecordWriter(RecordWriter):
     """
     Implementation of RecordWriter that persists the records in an HDF5 file.
     """
-    def write(self,
-              encoded_records: Iterable[Tuple[int, np.ndarray]],
-              output_file: str,
-              max_records: Optional[int]=None,
-              metadata: Optional[Dict[str, str]] = None):
-        """ See super class docstring. """
-        remaining_records = True
 
-        while remaining_records:
-            num_records = 0
-            index_to_length = {}
-            remaining_records = False
+    def __init__(self, output_file: str, **kwargs):
+        super().__init__(output_file, **kwargs)
+        self.hdf5_file = h5py.File(output_file, 'w')
+        self.index_to_length = dict()
 
-            with h5py.File(output_file, 'w') as f:
-                for idx, encoded in encoded_records:
-                    key = str(idx)
-                    if encoded is None:
-                        # sentence did not match the needed criteria to be encoded (e.g. too long), so
-                        # we add an empty dataset
-                        # (see http://docs.h5py.org/en/stable/high/dataset.html#creating-and-reading-empty-or-null-datasets-and-attributes)
-                        f.create_dataset(key, data=h5py.Empty("f"))
-                        length = 0
-                    else:
-                        f.create_dataset(key, encoded.shape, dtype=encoded.dtype, data=encoded)
-                        length = encoded.shape[0]
+    def close(self):
+        self.hdf5_file.close()
 
-                    index_to_length[key] = length
+        meta_dtype = h5py.special_dtype(vlen=str)
 
-                    num_records += 1
+        def add_metadata(key, value):
+            # add a dataset with the lengths of all sentences
+            meta_dataset = self.hdf5_file.create_dataset(key, (1,), dtype=meta_dtype)
+            meta_dataset[0] = value
 
-                    if max_records is not None and num_records >= max_records:
-                        remaining_records = True
-                        break
+        if self.metadata:
+            for key, value in self.metadata.items():
+                add_metadata(key, value)
 
-                def add_metadata(key, value):
-                    # add a dataset with the lengths of all sentences
-                    meta_dataset = f.create_dataset(key, (1,), dtype=h5py.special_dtype(vlen=str))
-                    meta_dataset[0] = value
+        # add extra piece of metadata with sequence lengths
+        add_metadata(_LENGTHS_KEY, json.dumps(self.index_to_length))
 
-                if metadata:
-                    for key, value in metadata.items():
-                        add_metadata(key, value)
+        if len(self.index_to_length) == 0:
+            os.remove(self.output_file)
 
-                # add extra piece of metadata with sequence lengths
-                add_metadata(_LENGTHS_KEY, json.dumps(index_to_length))
+    def write(self, idx: int, record: Optional[np.ndarray]):
+        key = str(idx)
+        assert key not in self.index_to_length
+        if record is None:
+            # sentence did not match the needed criteria to be encoded (e.g. too long), so
+            # we add an empty dataset
+            # (see http://docs.h5py.org/en/stable/high/dataset.html#creating-and-reading-empty-or-null-datasets-and-attributes)
+            self.hdf5_file.create_dataset(key, data=h5py.Empty("f"))
+            length = 0
+        else:
+            self.hdf5_file.create_dataset(key, record.shape, dtype=record.dtype, data=record)
+            length = record.shape[0]
 
-            if num_records == 0:
-                os.remove(output_file)
-
-            return remaining_records
+        self.index_to_length[key] = length
 
 
 def _to_numpy(hdf5_dataset):
