@@ -21,8 +21,9 @@ class Hdf5RecordWriter(RecordWriter):
     Implementation of RecordWriter that persists the records in an HDF5 file.
     """
 
-    def __init__(self, output_file: str, **kwargs):
-        super().__init__(output_file, **kwargs)
+    def __init__(self, output_file: str):
+        super().__init__()
+        self.output_file = output_file
         self.hdf5_file = h5py.File(output_file, 'w')
         self.index_to_length = dict()
 
