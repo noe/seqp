@@ -4,7 +4,7 @@
 # This source code is licensed under the license found in the LICENSE file in
 # the root directory of this source tree.
 
-from typing import Iterable, Optional, Tuple, Dict
+from typing import Iterable, Optional, Tuple, Dict, Union
 import numpy as np
 
 
@@ -37,7 +37,7 @@ class RecordReader:
         """
         raise NotImplementedError
 
-    def retrieve(self, index) -> np.ndarray:
+    def retrieve(self, index) -> Union[np.ndarray, Dict[str, np.ndarray]]:
         """
         Retrieves the sequence at the given index.
         :param index: Index of the sequence to retrieve.
@@ -52,10 +52,10 @@ class RecordReader:
         """
         raise NotImplementedError
 
-    def metadata(self, key: str) -> Optional[str]:
+    def metadata(self, metadata_key: str) -> Optional[str]:
         """
         Gets the piece of metadata associated to the given key.
-        :param key: Key of the piece of metadata.
+        :param metadata_key: Key of the piece of metadata.
         :return: metadata associated to the key, or None if none.
         """
         return None
@@ -74,9 +74,13 @@ class RecordWriter(object):
     method `write`.
     """
 
-    def __init__(self):
-        """Constructor. """
+    def __init__(self, fields: Optional[Iterable[str]]=None):
+        """
+        Constructor.
+        :param fields: Optional fields for the records to write
+        """
         self.metadata = dict()
+        self.fields = fields
 
     def __enter__(self) -> "RecordWriter":
         """
@@ -111,11 +115,15 @@ class RecordWriter(object):
         """
         self.metadata.update(metadata)
 
-    def write(self, idx: int, record: Optional[np.ndarray]) -> None:
+    def write(self, idx: int,
+              record: Optional[Union[np.ndarray, Dict[str, np.ndarray]]],
+              ) -> None:
         """
         Writes a record to the underlying storage.
         :param idx: Index of the record. Must be unique.
-        :param record: Record to be stored.
+        :param record: Record to be stored, or dictionary with
+               records (dictionary keys must match fields provided in
+               the constructor).
         :return: None
         """
         raise NotImplementedError
@@ -168,7 +176,9 @@ class ShardedWriter(RecordWriter):
         self.kwargs[self.output_file_param] = shard_name
         self.current_writer = self.writer_class()
 
-    def write(self, idx: int, record: Optional[np.ndarray]):
+    def write(self, idx: int,
+              record: Optional[Union[np.ndarray, Dict[str, np.ndarray]]],
+              ) -> None:
         if self.current_records >= self.max_records_per_shard:
             self._next_writer()
         self.current_writer.write(idx, record)

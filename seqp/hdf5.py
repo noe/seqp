@@ -8,12 +8,18 @@ import json
 import h5py
 import numpy as np
 import os
-from typing import List, Iterable, Tuple, Optional, Dict
+from typing import List, Iterable, Tuple, Optional, Dict, Union
 
 from .record import RecordReader, RecordWriter
 
 _LENGTHS_KEY = 'lengths'
+_FIELDS_KEY = 'fields'
 _MAX_LENGTH = float('inf')
+
+
+def _compose_key(idx: int, field: Optional[str]):
+    suffix = ":{}".format(field) if field else ""
+    return str(idx) + suffix
 
 
 class Hdf5RecordWriter(RecordWriter):
@@ -21,8 +27,8 @@ class Hdf5RecordWriter(RecordWriter):
     Implementation of RecordWriter that persists the records in an HDF5 file.
     """
 
-    def __init__(self, output_file: str):
-        super().__init__()
+    def __init__(self, output_file: str, keys: Iterable[str]=None):
+        super().__init__(keys=keys)
         self.output_file = output_file
         self.hdf5_file = h5py.File(output_file, 'w')
         self.index_to_length = dict()
@@ -44,23 +50,41 @@ class Hdf5RecordWriter(RecordWriter):
         # add extra piece of metadata with sequence lengths
         add_metadata(_LENGTHS_KEY, json.dumps(self.index_to_length))
 
+        # add extra piece of metadata with keys if they were provided
+        if self.fields:
+            add_metadata(_FIELDS_KEY, json.dumps(self.fields))
+
         if len(self.index_to_length) == 0:
             os.remove(self.output_file)
 
-    def write(self, idx: int, record: Optional[np.ndarray]):
-        key = str(idx)
-        assert key not in self.index_to_length
+    def write(self, idx: int,
+              record: Optional[Union[np.ndarray, Dict[str, np.ndarray]]],
+              ) -> None:
+        if isinstance(record, dict):
+            field_records = record
+            assert all(field in self.fields for field in field_records.keys())
+            for field, record in field_records.items():
+                self._write(idx, record, field)
+        else:
+            self._write(idx, record)
+
+    def _write(self, idx: int,
+               record: Optional[np.ndarray],
+               field: str=None,
+               ) -> None:
+        internal_key = _compose_key(idx, field)
+        assert internal_key not in self.index_to_length
         if record is None:
             # sentence did not match the needed criteria to be encoded (e.g. too long), so
             # we add an empty dataset
             # (see http://docs.h5py.org/en/stable/high/dataset.html#creating-and-reading-empty-or-null-datasets-and-attributes)
-            self.hdf5_file.create_dataset(key, data=h5py.Empty("f"))
+            self.hdf5_file.create_dataset(internal_key, data=h5py.Empty("f"))
             length = 0
         else:
-            self.hdf5_file.create_dataset(key, record.shape, dtype=record.dtype, data=record)
+            self.hdf5_file.create_dataset(internal_key, record.shape, dtype=record.dtype, data=record)
             length = record.shape[0]
 
-        self.index_to_length[key] = length
+        self.index_to_length[internal_key] = length
 
 
 def _to_numpy(hdf5_dataset):
@@ -91,8 +115,10 @@ class Hdf5RecordReader(RecordReader):
         self.total_count = 0
         self.index_to_length = {}
 
+        fields = None
         for file_name, store in self.hdf5_stores.items():
             file_index_to_length = json.loads(store[_LENGTHS_KEY][0])
+            fields = json.load((store[_FIELDS_KEY][0])) if _FIELDS_KEY in store else None
             file_index_to_length = {int(index): length
                                     for index, length in file_index_to_length.items()
                                     if min_length <= length <= max_length}
@@ -101,6 +127,7 @@ class Hdf5RecordReader(RecordReader):
             self.total_count += len(file_index_to_length)
             for index in file_index_to_length.keys():
                 self.index_to_filename[index] = file_name
+        self.fields = fields
 
     def close(self):
         """
@@ -123,17 +150,24 @@ class Hdf5RecordReader(RecordReader):
         """ See super class docstring. """
         yield from self.index_to_length.items()
 
-    def retrieve(self, index: int) -> np.ndarray:
+    def retrieve(self, idx: int) -> Union[np.ndarray, Dict[str, np.ndarray]]:
         """ See super class docstring. """
-        file_name = self.index_to_filename.get(index, None)
-        return (_to_numpy(self.hdf5_stores[file_name][str(index)])
+        if self.fields:
+            return {field: self._retrieve(idx, field) for field in self.fields}
+        else:
+            return self._retrieve(idx)
+
+    def _retrieve(self, idx: int, field: str) -> Optional[np.ndarray]:
+        file_name = self.index_to_filename.get(idx, None)
+        internal_key = _compose_key(idx, field)
+        return (_to_numpy(self.hdf5_stores[file_name][internal_key])
                 if file_name else None)
 
     def num_records(self) -> int:
         """ See super class docstring. """
         return self.total_count
 
-    def metadata(self, key) -> Optional[str]:
+    def metadata(self, metadata_key) -> Optional[str]:
         """ See super class docstring. """
         random_hdf5_store: h5py.File = next(iter(self.hdf5_stores.values()))
-        return str(random_hdf5_store[key][0])
+        return str(random_hdf5_store[metadata_key][0])
