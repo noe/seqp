@@ -16,8 +16,6 @@ except ImportError:
     assert False, "Fairseq is needed for seqp integration with fairseq!"
 
 
-import numpy as np
-
 from ..record import RecordReader
 from ..vocab import Vocabulary
 
@@ -26,17 +24,20 @@ class MonolingualDataset(FairseqDataset):
     """A dataset that provides helpers for batching."""
 
     def __init__(self,
-                 dictionary: Dictionary,
+                 pad_index,
+                 eos_index,
                  reader: RecordReader,
-                 left_pad=True):
-        self.dictionary = dictionary
+                 left_pad=True,
+                 move_eos_to_beginning=False):
+        self.pad_index = pad_index
+        self.eos_index = eos_index
         self.reader = reader
         self.left_pad = left_pad
+        self.move_eos_to_beginning = move_eos_to_beginning
+        assert not reader.fields, "Reader must have no fields"
 
     def __getitem__(self, index):
         elem = self.reader.retrieve(index)
-        if isinstance(elem, np.ndarray):
-            elem = torch.from_numpy(elem)
         return elem
 
     def __len__(self):
@@ -44,11 +45,11 @@ class MonolingualDataset(FairseqDataset):
 
     def collater(self, samples):
         tokens = fairseq_data_utils.collate_tokens(
-                [s for s in samples],
-                self.dictionary.pad_index,
-                self.dictionary.eos_index,
-                self.left_pad,
-                False)
+                        [s for s in samples],
+                        self.pad_index,
+                        self.eos_index,
+                        self.left_pad,
+                        move_eos_to_beginning=self.move_eos_to_beginning)
         lengths = torch.LongTensor([s.numel() for s in samples])
         lengths, sort_order = lengths.sort(descending=True)
         tokens = tokens.index_select(0, sort_order)
@@ -75,7 +76,7 @@ class MonolingualDataset(FairseqDataset):
         return False
 
     def prefetch(self, indices):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 def vocab_to_dictionary(vocab: Vocabulary) -> Dictionary:
