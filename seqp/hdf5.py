@@ -88,7 +88,7 @@ class Hdf5RecordWriter(RecordWriter):
             length = 0
         else:
             self.hdf5_file.create_dataset(internal_key, record.shape, dtype=record.dtype, data=record)
-            length = record[self.sequence_field].shape[0]
+            length = record.shape[0]
 
         return length
 
