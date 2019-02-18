@@ -14,6 +14,13 @@ class RecordReader:
     functionality of an indexed dataset of sequences.
     """
 
+    def __init__(self, fields: Iterable[str]=None):
+        """
+        Constructor.
+        :param fields: fields in the records of this reader, None if none.
+        """
+        self.fields = fields
+
     def indexes(self) -> Iterable[int]:
         """
         Returns the indexes of the sequences in the dataset.
