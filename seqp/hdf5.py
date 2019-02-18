@@ -48,11 +48,11 @@ class Hdf5RecordWriter(RecordWriter):
         # add extra piece of metadata with sequence lengths
         add_metadata(_LENGTHS_KEY, json.dumps(self.index_to_length))
 
-        self.hdf5_file.close()
-
         # add extra piece of metadata with keys if they were provided
         if self.fields:
             add_metadata(_FIELDS_KEY, json.dumps(self.fields))
+
+        self.hdf5_file.close()
 
         if len(self.index_to_length) == 0:
             os.remove(self.output_file)
