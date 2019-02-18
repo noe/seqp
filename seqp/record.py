@@ -81,13 +81,21 @@ class RecordWriter(object):
     method `write`.
     """
 
-    def __init__(self, fields: Optional[Iterable[str]]=None):
+    def __init__(self,
+                 fields: Optional[Iterable[str]]=None,
+                 sequence_field: str = None):
         """
         Constructor.
         :param fields: Optional fields for the records to write
+        :param sequence_field: field containing the sequence itself (it
+               will be used to compute the sequence length).
         """
         self.metadata = dict()
         self.fields = fields
+        self.sequence_field = sequence_field
+        if fields or sequence_field:
+            assert fields and sequence_field
+            assert sequence_field in fields
 
     def __enter__(self) -> "RecordWriter":
         """

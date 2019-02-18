@@ -27,8 +27,11 @@ class Hdf5RecordWriter(RecordWriter):
     Implementation of RecordWriter that persists the records in an HDF5 file.
     """
 
-    def __init__(self, output_file: str, fields: Iterable[str]=None):
-        super().__init__(fields=fields)
+    def __init__(self,
+                 output_file: str,
+                 fields: Iterable[str]=None,
+                 sequence_field: str=None):
+        super().__init__(fields=fields, sequence_field=sequence_field)
         self.output_file = output_file
         self.hdf5_file = h5py.File(output_file, 'w')
         self.index_to_length = dict()
@@ -63,15 +66,18 @@ class Hdf5RecordWriter(RecordWriter):
         if isinstance(record, dict):
             field_records = record
             assert all(field in self.fields for field in field_records.keys())
-            for field, record in field_records.items():
-                self._write(idx, record, field)
+            lengths = {field: self._write(idx, record, field)
+                       for field, record in field_records.items()}
+            length = lengths[self.sequence_field]
         else:
-            self._write(idx, record)
+            length = self._write(idx, record)
+
+        self.index_to_length[str(idx)] = length
 
     def _write(self, idx: int,
                record: Optional[np.ndarray],
                field: str=None,
-               ) -> None:
+               ) -> int:
         internal_key = _compose_key(idx, field)
         assert internal_key not in self.index_to_length
         if record is None:
@@ -82,9 +88,9 @@ class Hdf5RecordWriter(RecordWriter):
             length = 0
         else:
             self.hdf5_file.create_dataset(internal_key, record.shape, dtype=record.dtype, data=record)
-            length = record.shape[0]
+            length = record[self.sequence_field].shape[0]
 
-        self.index_to_length[internal_key] = length
+        return length
 
 
 def _to_numpy(hdf5_dataset):
