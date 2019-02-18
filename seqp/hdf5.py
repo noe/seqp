@@ -127,7 +127,7 @@ class Hdf5RecordReader(RecordReader):
             self.total_count += len(file_index_to_length)
             for index in file_index_to_length.keys():
                 self.index_to_filename[index] = file_name
-        self.fields = fields
+        super().__init__(fields)
 
     def close(self):
         """
