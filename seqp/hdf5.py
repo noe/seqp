@@ -34,8 +34,6 @@ class Hdf5RecordWriter(RecordWriter):
         self.index_to_length = dict()
 
     def close(self):
-        self.hdf5_file.close()
-
         meta_dtype = h5py.special_dtype(vlen=str)
 
         def add_metadata(key, value):
@@ -49,6 +47,8 @@ class Hdf5RecordWriter(RecordWriter):
 
         # add extra piece of metadata with sequence lengths
         add_metadata(_LENGTHS_KEY, json.dumps(self.index_to_length))
+
+        self.hdf5_file.close()
 
         # add extra piece of metadata with keys if they were provided
         if self.fields:

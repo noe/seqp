@@ -140,7 +140,8 @@ class ShardedWriter(RecordWriter):
                  writer_class,
                  output_file_template: str,
                  max_records_per_shard: int,
-                 output_file_param='output_file',
+                 output_file_param=0,
+                 *args,
                  **kwargs):
         """
         Constructor.
@@ -150,19 +151,25 @@ class ShardedWriter(RecordWriter):
                passing a shard index as argument.
         :param max_records_per_shard: Maximum number of records in a
                single shard file.
-        :param output_file_param: name of the parameter of writer_class
+        :param output_file_param: name or position of the parameter of writer_class
                constructor that specifies the file name.
-        :param kwargs: other arguments needed by writer_class constructor.
+        :param args: other positional arguments needed by writer_class constructor.
+        :param kwargs: other keyword arguments needed by writer_class constructor.
         """
         super().__init__()
+        self.args = list(args)
         self.kwargs = dict(kwargs)
         self.output_file_template = output_file_template
         self.max_records_per_shard = max_records_per_shard
         self.current_output_file_idx = 1
         self.writer_class = writer_class
         self.output_file_param = output_file_param
-        self.kwargs[output_file_param] = output_file_template.format(1)
-        self.current_writer = writer_class(**kwargs)
+        if isinstance(self.output_file_param, int):
+            self.args.insert(self.output_file_param,
+            output_file_template.format(1))
+        else:
+            self.kwargs[output_file_param] = output_file_template.format(1)
+        self.current_writer = writer_class(*self.args, **self.kwargs)
         self.current_records = 0
 
     def close(self):
@@ -173,8 +180,11 @@ class ShardedWriter(RecordWriter):
         self.current_records = 0
         self.current_output_file_idx += 1
         shard_name = self.output_file_template.format(self.current_output_file_idx)
-        self.kwargs[self.output_file_param] = shard_name
-        self.current_writer = self.writer_class()
+        if isinstance(self.output_file_param, int):
+            self.args[self.output_file_param] = shard_name
+        else:
+            self.kwargs[self.output_file_param] = shard_name
+        self.current_writer = self.writer_class(*self.args, **self.kwargs)
 
     def write(self, idx: int,
               record: Optional[Union[np.ndarray, Dict[str, np.ndarray]]],
