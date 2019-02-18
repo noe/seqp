@@ -166,7 +166,7 @@ class ShardedWriter(RecordWriter):
         self.output_file_param = output_file_param
         if isinstance(self.output_file_param, int):
             self.args.insert(self.output_file_param,
-            output_file_template.format(1))
+                             output_file_template.format(1))
         else:
             self.kwargs[output_file_param] = output_file_template.format(1)
         self.current_writer = writer_class(*self.args, **self.kwargs)
