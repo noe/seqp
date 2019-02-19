@@ -11,7 +11,7 @@ except ImportError:
 
 try:
     from fairseq.data import FairseqDataset, Dictionary
-    from fairseq.data.language_pair_dataset import data_utils as fairseq_data_utils
+    from fairseq.data import data_utils as fairseq_data_utils
 except ImportError:
     assert False, "Fairseq is needed for seqp integration with fairseq!"
 
