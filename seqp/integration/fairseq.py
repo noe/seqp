@@ -15,6 +15,7 @@ try:
 except ImportError:
     assert False, "Fairseq is needed for seqp integration with fairseq!"
 
+import numpy as np
 
 from ..record import RecordReader
 from ..vocab import Vocabulary
@@ -38,6 +39,8 @@ class MonolingualDataset(FairseqDataset):
 
     def __getitem__(self, index):
         elem = self.reader.retrieve(index)
+        if isinstance(elem, np.ndarray):
+            elem = torch.from_numpy(elem)
         return elem
 
     def __len__(self):
