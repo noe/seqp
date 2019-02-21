@@ -155,7 +155,6 @@ class ShardedWriter(RecordWriter):
                  writer_class,
                  output_file_template: str,
                  max_records_per_shard: int,
-                 output_file_param=0,
                  *args,
                  **kwargs):
         """
@@ -166,10 +165,10 @@ class ShardedWriter(RecordWriter):
                passing a shard index as argument.
         :param max_records_per_shard: Maximum number of records in a
                single shard file.
-        :param output_file_param: name or position of the parameter of writer_class
-               constructor that specifies the file name.
         :param args: other positional arguments needed by writer_class constructor.
-        :param kwargs: other keyword arguments needed by writer_class constructor.
+        :param kwargs: other keyword arguments needed by writer_class
+        constructor. Here you can specify key 'output_file_param', which can be
+        either an integer (position in `args`) or a string (key in `kwargs`).
         """
         super().__init__()
         self.args = list(args)
@@ -178,7 +177,7 @@ class ShardedWriter(RecordWriter):
         self.max_records_per_shard = max_records_per_shard
         self.current_output_file_idx = 1
         self.writer_class = writer_class
-        self.output_file_param = output_file_param
+        self.output_file_param = kwargs.pop('output_file_param', 0)
         if isinstance(self.output_file_param, int):
             self.args.insert(self.output_file_param,
                              output_file_template.format(1))
