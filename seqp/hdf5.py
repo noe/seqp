@@ -107,7 +107,7 @@ class Hdf5RecordReader(RecordReader):
     def __init__(self,
                  file_names: List[str],
                  min_length: int = 0,
-                 max_length: int = MAX_LENGTH):
+                 max_length: int = _MAX_LENGTH):
         """
         Constructs an Hdf5RecordReader.
         :param file_names: HDF5 files to read.
