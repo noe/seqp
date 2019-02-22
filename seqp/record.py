@@ -186,7 +186,7 @@ class ShardedWriter(RecordWriter):
             self.args.insert(self.output_file_param,
                              output_file_template.format(1))
         else:
-            self.kwargs[output_file_param] = output_file_template.format(1)
+            self.kwargs[self.output_file_param] = output_file_template.format(1)
         self.current_writer = writer_class(*self.args, **self.kwargs)
         self.current_records = 0
 
@@ -210,3 +210,4 @@ class ShardedWriter(RecordWriter):
         if self.current_records >= self.max_records_per_shard:
             self._next_writer()
         self.current_writer.write(idx, record)
+        self.current_records += 1
