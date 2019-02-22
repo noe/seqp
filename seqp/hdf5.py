@@ -117,10 +117,7 @@ class Hdf5RecordReader(RecordReader):
         if isinstance(file_names, str):
             file_names = [file_names]
         self.file_names = file_names
-        cache = 1024**2*200  # 200 Mb
-        self.hdf5_stores = {file_name: h5py.File(file_name,
-                                                 'r',
-                                                 chunk_cache_mem_size=cache)
+        self.hdf5_stores = {file_name: h5py.File(file_name, 'r')
                             for file_name in file_names}
         self.index_to_filename = dict()
         self.total_count = 0
