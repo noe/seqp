@@ -14,6 +14,7 @@ from .record import RecordReader, RecordWriter
 
 _LENGTHS_KEY = 'lengths'
 _FIELDS_KEY = 'fields'
+_SEQUENCE_FIELD_KEY = 'sequence_field'
 _MAX_LENGTH = float('inf')
 
 
@@ -54,6 +55,7 @@ class Hdf5RecordWriter(RecordWriter):
         # add extra piece of metadata with keys if they were provided
         if self.fields:
             add_metadata(_FIELDS_KEY, json.dumps(self.fields))
+            add_metadata(_SEQUENCE_FIELD_KEY, self.sequence_field)
 
         self.hdf5_file.close()
 
@@ -104,8 +106,8 @@ class Hdf5RecordReader(RecordReader):
 
     def __init__(self,
                  file_names: List[str],
-                 min_length: int=0,
-                 max_length: int=_MAX_LENGTH):
+                 min_length: int = 0,
+                 max_length: int = MAX_LENGTH):
         """
         Constructs an Hdf5RecordReader.
         :param file_names: HDF5 files to read.
@@ -122,9 +124,12 @@ class Hdf5RecordReader(RecordReader):
         self.index_to_length = {}
 
         fields = None
+        sequence_field = None
         for file_name, store in self.hdf5_stores.items():
             file_index_to_length = json.loads(store[_LENGTHS_KEY][0])
             fields = json.load((store[_FIELDS_KEY][0])) if _FIELDS_KEY in store else None
+            sequence_field = (json.load((store[_SEQUENCE_FIELD_KEY][0]))
+                              if _SEQUENCE_FIELD_KEY in store else None)
             file_index_to_length = {int(index): length
                                     for index, length in file_index_to_length.items()
                                     if min_length <= length <= max_length}
@@ -133,7 +138,7 @@ class Hdf5RecordReader(RecordReader):
             self.total_count += len(file_index_to_length)
             for index in file_index_to_length.keys():
                 self.index_to_filename[index] = file_name
-        super().__init__(fields)
+        super().__init__(fields, sequence_field)
 
     def close(self):
         """
