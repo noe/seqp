@@ -125,10 +125,11 @@ class Hdf5RecordReader(RecordReader):
 
         fields = None
         sequence_field = None
+
         for file_name, store in self.hdf5_stores.items():
             file_index_to_length = json.loads(store[_LENGTHS_KEY][0])
-            fields = json.load((store[_FIELDS_KEY][0])) if _FIELDS_KEY in store else None
-            sequence_field = (json.load((store[_SEQUENCE_FIELD_KEY][0]))
+            fields = json.loads((store[_FIELDS_KEY][0])) if _FIELDS_KEY in store else None
+            sequence_field = (store[_SEQUENCE_FIELD_KEY][0]
                               if _SEQUENCE_FIELD_KEY in store else None)
             file_index_to_length = {int(index): length
                                     for index, length in file_index_to_length.items()
