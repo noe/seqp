@@ -211,3 +211,7 @@ class ShardedWriter(RecordWriter):
             self._next_writer()
         self.current_writer.write(idx, record)
         self.current_records += 1
+
+    def add_metadata(self, metadata: Dict[str, str]) -> None:
+        self.current_writer.add_metadata(metadata)
+
