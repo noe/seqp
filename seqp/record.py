@@ -203,6 +203,7 @@ class ShardedWriter(RecordWriter):
         else:
             self.kwargs[self.output_file_param] = shard_name
         self.current_writer = self.writer_class(*self.args, **self.kwargs)
+        self.current_writer.add_metadata(self.metadata)
 
     def write(self, idx: int,
               record: Optional[Union[np.ndarray, Dict[str, np.ndarray]]],
@@ -214,4 +215,5 @@ class ShardedWriter(RecordWriter):
 
     def add_metadata(self, metadata: Dict[str, str]) -> None:
         self.current_writer.add_metadata(metadata)
+        self.metadata.update(metadata)
 
