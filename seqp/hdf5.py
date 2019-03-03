@@ -40,10 +40,10 @@ class Hdf5RecordWriter(RecordWriter):
     def close(self):
         meta_dtype = h5py.special_dtype(vlen=str)
 
-        def add_metadata(key, value):
+        def add_metadata(k, v):
             # add a dataset with the lengths of all sentences
-            meta_dataset = self.hdf5_file.create_dataset(key, (1,), dtype=meta_dtype)
-            meta_dataset[0] = value
+            meta_dataset = self.hdf5_file.create_dataset(k, (1,), dtype=meta_dtype)
+            meta_dataset[0] = v
 
         if self.metadata:
             for key, value in self.metadata.items():
@@ -105,7 +105,7 @@ class Hdf5RecordReader(RecordReader):
     """
 
     def __init__(self,
-                 file_names: List[str],
+                 file_names: Union[str, List[str]],
                  min_length: int = 0,
                  max_length: int = _MAX_LENGTH):
         """
@@ -167,9 +167,9 @@ class Hdf5RecordReader(RecordReader):
         if self.fields:
             return {field: self._retrieve(idx, field) for field in self.fields}
         else:
-            return self._retrieve(idx)
+            return self._retrieve(idx, None)
 
-    def _retrieve(self, idx: int, field: str) -> Optional[np.ndarray]:
+    def _retrieve(self, idx: int, field: Optional[str]) -> Optional[np.ndarray]:
         file_name = self.index_to_filename.get(idx, None)
         internal_key = _compose_key(idx, field)
         return (_to_numpy(self.hdf5_stores[file_name][internal_key])
