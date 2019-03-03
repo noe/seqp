@@ -25,6 +25,31 @@ class RecordReader:
         self.fields = fields
         self.sequence_field = sequence_field
 
+    def __enter__(self) -> "RecordReader":
+        """
+        Invoked when entering the context scope.
+        :return: returns itself so that close is invoked at the scope exit.
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Invoked at with block scope exit. Calls self.close()
+        in order to release any resource in use.
+        :param exc_type:
+        :param exc_val:
+        :param exc_tb:
+        :return: None
+        """
+        self.close()
+
+    def close(self):
+        """
+        Closes any resource in use (e.g. open files).
+        :return: None
+        """
+        pass
+
     def indexes(self) -> Iterable[int]:
         """
         Returns the indexes of the sequences in the dataset.
@@ -72,7 +97,7 @@ class RecordReader:
         return None
 
 
-class RecordWriter(object):
+class RecordWriter:
     """
     Abstract class with the contract of a record writer, which
     basically writes indexed sequences, probably to a file,
