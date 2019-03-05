@@ -112,15 +112,18 @@ class RecordWriter:
 
     def __init__(self,
                  fields: Optional[Iterable[str]]=None,
-                 sequence_field: str = None):
+                 sequence_field: str = None,
+                 append: bool = False):
         """
         Constructor.
         :param fields: Optional fields for the records to write
         :param sequence_field: field containing the sequence itself (it
                will be used to compute the sequence length).
+        :param append: whether to append or overwrite.
         """
         self.metadata = dict()
         self.fields = fields
+        self.append = append
         self.sequence_field = sequence_field
         if fields or sequence_field:
             assert fields and sequence_field
@@ -204,30 +207,41 @@ class ShardedWriter(RecordWriter):
         self.kwargs = dict(kwargs)
         self.output_file_template = output_file_template
         self.max_records_per_shard = max_records_per_shard
-        self.current_output_file_idx = 1
+        initial_file_idx = 1
+        self.current_output_file_idx = initial_file_idx
         self.writer_class = writer_class
+        assert 'append' not in kwargs, "Flag 'append' not allowed in sharded writers"
         self.output_file_param = kwargs.pop('output_file_param', 0)
-        if isinstance(self.output_file_param, int):
-            self.args.insert(self.output_file_param,
-                             output_file_template.format(1))
-        else:
-            self.kwargs[self.output_file_param] = output_file_template.format(1)
-        self.current_writer = writer_class(*self.args, **self.kwargs)
         self.current_records = 0
+        self.former_files = []
+        first_output_file = self._file_name(initial_file_idx)
+        self.current_writer = self._writer_for(first_output_file)
 
     def close(self):
         self.current_writer.close()
 
-    def _next_writer(self):
+    def _file_name(self, file_idx) -> str:
+        return self.output_file_template.format(file_idx)
+
+    def _writer_for(self, shard_name, **extra_kwags) -> RecordWriter:
+        args = list(self.args)
+        kwargs = dict(self.kwargs)
+        kwargs.update(extra_kwags)
+
+        if isinstance(self.output_file_param, int):
+            args.insert(self.output_file_param, shard_name)
+        else:
+            kwargs[self.output_file_param] = shard_name
+
+        return self.writer_class(*args, **kwargs)
+
+    def _next_writer(self) -> None:
+        self.former_files.append(self._file_name(self.current_output_file_idx))
         self.current_writer.close()
         self.current_records = 0
         self.current_output_file_idx += 1
-        shard_name = self.output_file_template.format(self.current_output_file_idx)
-        if isinstance(self.output_file_param, int):
-            self.args[self.output_file_param] = shard_name
-        else:
-            self.kwargs[self.output_file_param] = shard_name
-        self.current_writer = self.writer_class(*self.args, **self.kwargs)
+        shard_name = self._file_name(self.current_output_file_idx)
+        self.current_writer = self._writer_for(shard_name)
         self.current_writer.add_metadata(self.metadata)
 
     def write(self, idx: int,
@@ -241,4 +255,9 @@ class ShardedWriter(RecordWriter):
     def add_metadata(self, metadata: Dict[str, str]) -> None:
         self.current_writer.add_metadata(metadata)
         self.metadata.update(metadata)
+        self._update_metadata_in_previous_files()
 
+    def _update_metadata_in_previous_files(self) -> None:
+        for former_file in self.former_files:
+            with self._writer_for(former_file, append=True) as writer:
+                writer.add_metadata(self.metadata)

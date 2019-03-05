@@ -31,16 +31,29 @@ class Hdf5RecordWriter(RecordWriter):
     def __init__(self,
                  output_file: str,
                  fields: Iterable[str]=None,
-                 sequence_field: str=None):
-        super().__init__(fields=fields, sequence_field=sequence_field)
+                 sequence_field: str=None,
+                 append: bool=False):
+        super().__init__(fields=fields, sequence_field=sequence_field, append=append)
+
+        if fields is not None or sequence_field is not None:
+            assert fields is not None and sequence_field is not None
+            assert sequence_field in fields
+
         self.output_file = output_file
-        self.hdf5_file = h5py.File(output_file, 'w')
-        self.index_to_length = dict()
+        self.hdf5_file = h5py.File(output_file, 'a' if append else 'w')
+        self.index_to_length = (dict() if not append
+                                else json.loads(self.hdf5_file[_LENGTHS_KEY][0]))
+        if append and fields is not None:
+            assert set(fields) == set(json.loads(self.hdf5_file[_FIELDS_KEY][0]))
+            assert sequence_field == self.hdf5_file[_SEQUENCE_FIELD_KEY][0]
 
     def close(self):
         meta_dtype = h5py.special_dtype(vlen=str)
 
         def add_metadata(k, v):
+            if self.append and k in self.hdf5_file:  # remove if already exists
+                del self.hdf5_file[k]
+
             # add a dataset with the lengths of all sentences
             meta_dataset = self.hdf5_file.create_dataset(k, (1,), dtype=meta_dtype)
             meta_dataset[0] = v
@@ -62,7 +75,8 @@ class Hdf5RecordWriter(RecordWriter):
         if len(self.index_to_length) == 0:
             os.remove(self.output_file)
 
-    def write(self, idx: int,
+    def write(self,
+              idx: int,
               record: Optional[Union[np.ndarray, Dict[str, np.ndarray]]],
               ) -> None:
         if isinstance(record, dict):
@@ -128,7 +142,7 @@ class Hdf5RecordReader(RecordReader):
 
         for file_name, store in self.hdf5_stores.items():
             file_index_to_length = json.loads(store[_LENGTHS_KEY][0])
-            fields = json.loads((store[_FIELDS_KEY][0])) if _FIELDS_KEY in store else None
+            fields = json.loads(store[_FIELDS_KEY][0]) if _FIELDS_KEY in store else None
             sequence_field = (store[_SEQUENCE_FIELD_KEY][0]
                               if _SEQUENCE_FIELD_KEY in store else None)
             file_index_to_length = {int(index): length
@@ -181,5 +195,6 @@ class Hdf5RecordReader(RecordReader):
 
     def metadata(self, metadata_key) -> Optional[str]:
         """ See super class docstring. """
-        random_hdf5_store: h5py.File = next(iter(self.hdf5_stores.values()))
-        return str(random_hdf5_store[metadata_key][0])
+        last_file = self.file_names[-1]
+        last_hdf5_store: h5py.File = self.hdf5_stores[last_file]
+        return str(last_hdf5_store[metadata_key][0])
