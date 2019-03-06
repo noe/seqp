@@ -23,7 +23,7 @@ This library is for you if you want to encode text (or any
 - `seqp` handles data as numpy arrays and it is not tied to
   any deep learning framework. Nevertheless, it provides
   optional integration components to some popular deep
-  learning libraries such as fairseq.
+  learning libraries such as [fairseq](https://github.com/pytorch/fairseq/).
 
 # Use Cases
 
@@ -49,12 +49,12 @@ See the [DNA example](./examples/sharded_storage.ipynb).
 `seqp` offers several jupyter notebooks with usage examples:
 
 - [Save text as token IDs and load them back](./examples/basic_read_write.ipynb)
-- Use fields to add the dependency parse of each sequence **TODO**
+- [Use fields to add the dependency parse of each sequence](./examples/fields.ipynb)
 - [Sharded storage of DNA data](./examples/sharded_storage.ipynb)
-- Sharded storage of BERT representations **TODO**
-- Reading records in batches, bucketing by sequence length **TODO**
-- Integration with bare pytorch **TODO**
-- Integration with fairseq **TODO**
+- [Sharded storage of BERT representations](./examples/bert.ipynb)
+- [Reading records in batches, bucketing by sequence length](./examples/data_load.ipynb)
+- [Integration with bare pytorch](./examples/integration_pytorch.ipynb)
+- [Integration with fairseq](./examples/integration_fairseq.ipynb)
 
 Also, `seqp` offers some very simple command line tools that can
 serve as usage examples:
@@ -85,11 +85,10 @@ it as follows:
   author    = {Noe Casas},
   title     = {seqp}
   version   = {0.1},
-  publisher = {Zenodo},
   month     = march,
   year      = 2019,
   doi       = {TODO/zenodo.TODO},
-  url       = {http://dx.doi.org/TODO/zenodo.TODO}
+  url       = {https://github.com/noe/seqp/}
 }
 ```
 
