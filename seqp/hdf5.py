@@ -80,12 +80,14 @@ class Hdf5RecordWriter(RecordWriter):
               record: Optional[Union[np.ndarray, Dict[str, np.ndarray]]],
               ) -> None:
         if isinstance(record, dict):
+            assert self.fields is not None, "Writers with fields need numpy arrays as record"
             field_records = record
             assert all(field in self.fields for field in field_records.keys())
             lengths = {field: self._write(idx, record, field)
                        for field, record in field_records.items()}
             length = lengths[self.sequence_field]
         else:
+            assert self.fields is None, "Writers with fields need dictionaries as record"
             length = self._write(idx, record)
 
         self.index_to_length[str(idx)] = length
