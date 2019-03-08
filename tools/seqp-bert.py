@@ -60,7 +60,7 @@ class BertInterface(TextCodec):
             return None
 
         indexed_tokens = self.tokenizer.convert_tokens_to_ids(tokenized_text)
-        tokens_tensor = torch.Tensor([indexed_tokens]).to(self.device)
+        tokens_tensor = torch.LongTensor([indexed_tokens]).to(self.device)
         sequence_output, _ = self.model.bert(tokens_tensor, output_all_encoded_layers=False)
         return sequence_output.detach()[0].cpu().numpy()
 
