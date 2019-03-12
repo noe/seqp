@@ -4,6 +4,8 @@
 # This source code is licensed under the license found in the LICENSE file in
 # the root directory of this source tree.
 
+
+from bisect import bisect_right
 import math
 import random
 import numpy as np
@@ -28,82 +30,84 @@ def _compute_bucket_limits(total_count: int,
     bucket_limits = []
     bucket_min = 0
     bucket_max = 0
-    total_accumulated_count = 0
-    for bucket_idx in range(num_buckets):
-        elems_in_bucket = 0
-        length = bucket_min
 
-        if total_accumulated_count >= total_count:
+    length_counts = sorted(list(length_counter.items()), key=lambda x: x[0])
+    length_idx = 0
+
+    for bucket_idx in range(num_buckets):
+        if length_idx >= len(length_counts):
             break
 
-        while elems_in_bucket < bucket_size:
-            count = length_counter.get(length, 0)
+        elems_in_bucket = 0
+
+        while elems_in_bucket < bucket_size and length_idx < len(length_counts):
+            length, count = length_counts[length_idx]
             elems_in_bucket += count
-            total_accumulated_count += count
             bucket_max = length
-            length += 1
+            length_idx += 1
 
         bucket_limits.append((bucket_min, bucket_max))
         bucket_min = bucket_max + 1
+
+    is_last_bucket_too_small = elems_in_bucket < 0.5 * bucket_size
+
+    if is_last_bucket_too_small:
+        # fuse last bucket with the previous one
+        new_last_bucket_limits = (bucket_limits[-2][0], bucket_limits[-1][1])
+        bucket_limits = bucket_limits[:-2] + [new_last_bucket_limits]
+
     return bucket_limits
 
 
-def _get_bucket_id(bucket_limits, length):
-    if length < bucket_limits[0][0]:
+def _get_bucket_id(bucket_mins: List[int], max_possible_length, length: int):
+    if length < bucket_mins[0]:
         # less than minimum length
         return -1
-    if length > bucket_limits[-1][1]:
+    if length > max_possible_length:
         # greater than maximum length
-        return len(bucket_limits)
-    lower = 0
-    upper = len(bucket_limits)
-    while lower < upper:  # use < instead of <=
-        x = lower + (upper - lower) // 2
-        bucket_min, bucket_max = bucket_limits[x]
-        if bucket_min <= length <= bucket_max:
-            return x
-        elif length > bucket_max:
-            if lower == x:
-                break
-            lower = x
-        elif length < bucket_min:
-            upper = x
+        return len(bucket_mins)
+
+    bucket_id = bisect_right(bucket_mins, length) - 1
+    return bucket_id
 
 
-def _get_max_bucket_id(bucket_limits, length):
-    bucket_id = _get_bucket_id(bucket_limits, length)
-    if bucket_id >= len(bucket_limits):
+def _get_max_bucket_id(bucket_mins, bucket_limits, length):
+    bucket_id = _get_bucket_id(bucket_mins, bucket_limits[-1][1], length)
+    if bucket_id >= len(bucket_mins):
         return bucket_id - 1
     bucket_min, bucket_max = bucket_limits[bucket_id]
     return bucket_id if bucket_max == length else bucket_id - 1
 
 
-def _get_min_bucket_id(bucket_limits, length):
-    bucket_id = _get_bucket_id(bucket_limits, length)
+def _get_min_bucket_id(bucket_mins, bucket_limits, length):
+    bucket_id = _get_bucket_id(bucket_mins, bucket_limits[-1][1], length)
     if bucket_id < 0:
         return 0
     bucket_min, bucket_max = bucket_limits[bucket_id]
     return bucket_id if bucket_min == length else bucket_id + 1
 
 
-def _get_clipped_bucket_id(bucket_limits, length):
-    bucket_id = _get_bucket_id(bucket_limits, length)
-    return max(min(bucket_id, len(bucket_limits) - 1), 0)
+def _get_clipped_bucket_id(bucket_mins, max_possible_length, length):
+    bucket_id = _get_bucket_id(bucket_mins, max_possible_length, length)
+    return max(min(bucket_id, len(bucket_mins) - 1), 0)
 
 
 class DataLoader:
     def __init__(self, reader: RecordReader, pad_value=0, num_buckets=100):
         self.record_reader = reader
         self.pad_value = pad_value
-        counter = Counter(list(reader.indexes_and_lengths()))
+        counter = Counter([l for i, l in reader.indexes_and_lengths()])
         self.bucket_limits = _compute_bucket_limits(self.record_reader.num_records(),
                                                     num_buckets,
                                                     counter)
         self.num_buckets = len(self.bucket_limits)  # number of buckets is determined in the limits
 
         self.buckets = defaultdict(list)
+        self.bucket_mins = [self.bucket_limits[k][0] for k in range(self.num_buckets)]
+        self.max_length = self.bucket_limits[-1][1]
+
         for index, length in self.record_reader.indexes_and_lengths():
-            bucket_id = _get_bucket_id(self.bucket_limits, length)
+            bucket_id = _get_bucket_id(self.bucket_mins, self.max_length, length)
             self.buckets[bucket_id].append(index)
 
     def iterator(self,
@@ -161,7 +165,9 @@ class DataLoader:
             num_sentences = (current_batch_size if not is_size_in_tokens
                              else int(math.floor(current_batch_size / float(padded_length))))
 
-            assert num_sentences <= len(self.buckets[bucket_id])
+            bucket_len = len(self.buckets[bucket_id])
+            assert num_sentences <= bucket_len, f"Bucket {bucket_id} only has {bucket_len} elems"
+
             sentence_keys = random.sample(self.buckets[bucket_id], num_sentences)
 
             sentences = np.array([pad(self.record_reader.retrieve(k), padded_length)
