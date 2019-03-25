@@ -25,20 +25,22 @@ class MonolingualDataset(FairseqDataset):
     """A dataset that provides helpers for batching."""
 
     def __init__(self,
-                 pad_index,
-                 eos_index,
+                 dictionary: Dictionary,
                  reader: RecordReader,
                  left_pad=True,
-                 move_eos_to_beginning=False):
-        self.pad_index = pad_index
-        self.eos_index = eos_index
+                 move_eos_to_beginning=False,
+                 sequence_field=None):
+        self.dictionary = dictionary
         self.reader = reader
         self.left_pad = left_pad
         self.move_eos_to_beginning = move_eos_to_beginning
-        assert not reader.fields, "Reader must have no fields"
+        if reader.fields:
+            self._get_seq = lambda record: record[reader.sequence_field]
+        else:
+            self._get_seq = lambda record: record
 
     def __getitem__(self, index):
-        elem = self.reader.retrieve(index)
+        elem = self._get_seq(self.reader.retrieve(index))
         if isinstance(elem, np.ndarray):
             elem = torch.from_numpy(elem)
         return elem
@@ -49,8 +51,8 @@ class MonolingualDataset(FairseqDataset):
     def collater(self, samples):
         tokens = fairseq_data_utils.collate_tokens(
                         [s for s in samples],
-                        self.pad_index,
-                        self.eos_index,
+                        self.dictionary.pad_index,
+                        self.dictionary.eos_index,
                         self.left_pad,
                         move_eos_to_beginning=self.move_eos_to_beginning)
         lengths = torch.LongTensor([s.numel() for s in samples])
@@ -59,7 +61,7 @@ class MonolingualDataset(FairseqDataset):
         return tokens
 
     def get_dummy_batch(self, num_tokens, max_positions):
-        return self.src_dict.dummy_sentence(num_tokens)
+        return self.dictionary.dummy_sentence(num_tokens)
 
     def num_tokens(self, index):
         return self.reader.length(index)
