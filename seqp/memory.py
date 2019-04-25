@@ -21,7 +21,8 @@ class InMemoryReader(RecordReader):
                  sequence_field: str = None):
         if fields:
             assert sequence_field
-            assert isinstance(data, dict)
+            if data:
+                assert isinstance(data[0], dict)
         super().__init__(fields=fields, sequence_field=sequence_field)
         self.data = data
         self.metadata = metadata or dict()
