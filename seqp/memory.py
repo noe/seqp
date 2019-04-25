@@ -31,16 +31,15 @@ class InMemoryReader(RecordReader):
         return range(len(self.data))
 
     def length(self, index) -> int:
-        sequence = self.retrieve(index)
+        item = self.retrieve(index)
+        sequence = item[self.sequence_field] if self.sequence_field else item
         return sequence.shape[0]
 
     def indexes_and_lengths(self) -> Iterable[Tuple[int, int]]:
         return ((index, self.length(index)) for index in self.indexes())
 
     def retrieve(self, index) -> Union[np.ndarray, Dict[str, np.ndarray]]:
-        item = self.data[index]
-        sequence = item[self.sequence_field] if self.sequence_field else item
-        return sequence
+        return self.data[index]
 
     def num_records(self) -> int:
         return len(self.data)
