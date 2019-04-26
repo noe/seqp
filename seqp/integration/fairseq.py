@@ -28,8 +28,7 @@ class MonolingualDataset(FairseqDataset):
                  dictionary: Dictionary,
                  reader: RecordReader,
                  left_pad=True,
-                 move_eos_to_beginning=False,
-                 sequence_field=None):
+                 move_eos_to_beginning=False):
         self.dictionary = dictionary
         self.reader = reader
         self.left_pad = left_pad
