@@ -10,15 +10,16 @@ except ImportError:
     assert False, "Pytorch is needed for seqp integration with fairseq"
 
 try:
-    from fairseq.data import FairseqDataset, Dictionary
+    from fairseq.data import FairseqDataset, Dictionary, LanguagePairDataset
     from fairseq.data import data_utils as fairseq_data_utils
+    from fairseq.tasks.translation import TranslationTask
+    from fairseq.tasks import register_task
 except ImportError:
     assert False, "Fairseq is needed for seqp integration with fairseq!"
 
 import numpy as np
 
-from ..record import RecordReader
-from ..vocab import Vocabulary
+from seqp.record import RecordReader
 
 
 class MonolingualDataset(FairseqDataset):
@@ -81,37 +82,3 @@ class MonolingualDataset(FairseqDataset):
 
     def prefetch(self, indices):
         raise NotImplementedError
-
-
-def vocab_to_dictionary(vocab: Vocabulary) -> Dictionary:
-    """
-    Creates a fairseq Dictionary from a seqp Vocabulary. It manipulates
-    the Dictionary's internal state to avoid reserving token 0 for Lua
-    compatibility in order to respect the token ID associations in the
-    original Vocabulary.
-
-    :param vocab: Vocabulary to convert to Dictionary.
-    :return: Resulting Dictionary.
-    """
-    pad_symbol = vocab.idx2symbol[vocab.pad_id]
-    eos_symbol = vocab.idx2symbol[vocab.eos_id]
-    unk_symbol = vocab.idx2symbol[vocab.unk_id]
-
-    dictionary = Dictionary(pad=pad_symbol, unk=unk_symbol, eos=eos_symbol)
-
-    # We clear up the internal state to write it from scratch (and without
-    # the Lua heritage token zero, to keep token IDs)
-    dictionary.symbols = []
-    dictionary.count = []
-    dictionary.indices = {}
-    dictionary.nspecial = 3
-
-    for symbol in vocab.idx2symbol:
-        unknown_frequency = 1   # frequency info is not available
-        dictionary.add_symbol(symbol, unknown_frequency)
-
-    dictionary.pad_index = vocab.pad_id
-    dictionary.eos_index = vocab.eos_id
-    dictionary.unk_index = vocab.unk_id
-
-    return dictionary
