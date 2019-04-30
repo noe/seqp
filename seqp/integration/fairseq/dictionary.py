@@ -5,15 +5,7 @@
 # the root directory of this source tree.
 
 try:
-    import torch
-except ImportError:
-    assert False, "Pytorch is needed for seqp integration with fairseq"
-
-try:
-    from fairseq.data import FairseqDataset, Dictionary, LanguagePairDataset
-    from fairseq.data import data_utils as fairseq_data_utils
-    from fairseq.tasks.translation import TranslationTask
-    from fairseq.tasks import register_task
+    from fairseq.data import Dictionary
 except ImportError:
     assert False, "Fairseq is needed for seqp integration with fairseq!"
 

@@ -4,22 +4,10 @@
 # This source code is licensed under the license found in the LICENSE file in
 # the root directory of this source tree.
 
-try:
-    import torch
-except ImportError:
-    assert False, "Pytorch is needed for seqp integration with fairseq"
-
-try:
-    from fairseq.data import FairseqDataset, Dictionary, LanguagePairDataset
-    from fairseq.data import data_utils as fairseq_data_utils
-    from fairseq.tasks.translation import TranslationTask
-    from fairseq.tasks import register_task
-except ImportError:
-    assert False, "Fairseq is needed for seqp integration with fairseq!"
 
 import numpy as np
 import os
-from typing import Iterable, Optional
+from typing import Iterable
 from tqdm import tqdm
 
 from seqp.vocab import Vocabulary, VocabularyCollector
