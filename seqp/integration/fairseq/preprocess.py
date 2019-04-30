@@ -39,6 +39,8 @@ def _write_vocabs(train_prefix, src, tgt, destdir, joined_vocabs):
         vocab_file = os.path.join(destdir, f'vocab.{src}-{tgt}')
         with open(vocab_file, 'w') as f:
             f.write(vocab.to_json(indent=4))
+
+        src_vocab = tgt_vocab = vocab
     else:
         with open(src_file) as f:
             src_vocab = _create_vocab(f)
@@ -90,15 +92,15 @@ def main():
                 'valid': args.validpref,
                 'test': args.testpref}
 
+    os.makedirs(args.destdir, exist_ok=True)
+
     src_vocab, tgt_vocab = _write_vocabs(args.trainpref,
                                          args.source_lang,
                                          args.target_lang,
                                          args.destdir,
                                          args.joined_dictionary)
 
-    vocabs = {args.source: src_vocab, args.target:tgt_vocab}
-
-    os.makedirs(args.destdir, exist_ok=True)
+    vocabs = {args.source_lang: src_vocab, args.target_lang: tgt_vocab}
 
     for split, prefix in prefixes.items():
         for lang in [args.source_lang, args.target_lang]:
@@ -109,7 +111,7 @@ def main():
             with open(input_filename) as sentences, \
                     _writer(output_prefix, lang, num_sents, args.max_shard) as writer:
                 for idx, sentence in tqdm(enumerate(sentences), total=num_sents):
-                    tokenized_text = sentence.strip().split("")
+                    tokenized_text = sentence.strip().split(" ")
                     token_ids = vocab.encode(tokenized_text, use_unk=False, add_eos=True)
                     writer.write(idx, np.array(token_ids))
 
