@@ -28,16 +28,17 @@ from seqp.hdf5 import Hdf5RecordWriter
 from seqp.util import count_lines
 
 
+def _create_vocab(sentences: Iterable[str]) -> Vocabulary:
+    builder = VocabularyCollector()
+    for sentence in sentences:
+        for symbol in sentence.strip().split(" "):
+            builder.add_symbol(symbol)
+    vocab = builder.consolidate()
+    return vocab
+
+
 def _write_vocabs(train_prefix, src, tgt, destdir, joined_vocabs):
     import itertools
-
-    def create_vocab(sentences: Iterable[str]) -> Vocabulary:
-        builder = VocabularyCollector()
-        for sentence in sentences:
-            for symbol in sentence.strip().split(" "):
-                builder.add_symbol(symbol)
-        vocab = builder.consolidate()
-        return vocab
 
     src_file = f"{train_prefix}.{src}"
     tgt_file = f"{train_prefix}.{tgt}"
@@ -45,30 +46,30 @@ def _write_vocabs(train_prefix, src, tgt, destdir, joined_vocabs):
     if joined_vocabs:
         with open(src_file) as f1, open(tgt_file) as f2:
             sentences = itertools.chain(f1, f2)
-            vocab = create_vocab(sentences)
+            vocab = _create_vocab(sentences)
 
-        vocab_file = os.path.join(destdir, 'joint_vocab.json')
+        vocab_file = os.path.join(destdir, f'vocab.{src}-{tgt}')
         with open(vocab_file, 'w') as f:
             f.write(vocab.to_json(indent=4))
     else:
         with open(src_file) as f:
-            src_vocab = create_vocab(f)
-        src_vocab_file = os.path.join(destdir, 'vocab.json')
+            src_vocab = _create_vocab(f)
+        src_vocab_file = os.path.join(destdir, f'vocab.{tgt}')
         with open(src_vocab_file, 'w') as f:
             f.write(src_vocab.to_json(indent=4))
         with open(tgt_file) as f:
-            tgt_vocab = create_vocab(f)
-        tgt_vocab_file = os.path.join(destdir, f'vocab.{}')
+            tgt_vocab = _create_vocab(f)
+        tgt_vocab_file = os.path.join(destdir, f'vocab.{src}')
         with open(tgt_vocab_file, 'w') as f:
             f.write(tgt_vocab.to_json(indent=4))
 
     return src_vocab, tgt_vocab
 
 
-def _create_writer(file_prefix: str,
-                   suffix: str,
-                   num_sentences: int,
-                   max_records_per_shard: int) -> RecordWriter:
+def _writer(file_prefix: str,
+            suffix: str,
+            num_sentences: int,
+            max_records_per_shard: int) -> RecordWriter:
     if num_sentences < max_records_per_shard:
         return Hdf5RecordWriter(f"{file_prefix}.{suffix}.hdf5")
     else:
@@ -106,12 +107,12 @@ def main():
     for split, prefix in prefixes.items():
         for lang in [args.source, args.target]:
             vocab = vocabs[lang]
-            input_filename = os.path.join(prefix + "." + lang)
+            input_filename = f"{prefix}.{lang}"
             output_prefix = os.path.join(args.destdir, split)
-            num = count_lines(input_filename)
+            num_sents = count_lines(input_filename)
             with open(input_filename) as sentences, \
-                    _create_writer(output_prefix, lang, num, args.max_shard) as writer:
-                for idx, sentence in tqdm(enumerate(sentences), total=num):
+                    _writer(output_prefix, lang, num_sents, args.max_shard) as writer:
+                for idx, sentence in tqdm(enumerate(sentences), total=num_sents):
                     tokenized_text = sentence.strip().split("")
                     token_ids = vocab.encode(tokenized_text, use_unk=False, add_eos=True)
                     writer.write(idx, np.array(token_ids))

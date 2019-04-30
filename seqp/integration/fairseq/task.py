@@ -85,19 +85,22 @@ class SeqpTranslationTask(TranslationTask):
     def setup_task(cls, args, **kwargs):
         args.left_pad_source = False
         args.left_pad_target = False
+        src = args.source_lang
+        tgt = args.target_lang
+
         data_dir = args.data[0]
-        joint_vocab_file = os.path.join(data_dir, 'joint_vocab.json')
+        joint_vocab_file = os.path.join(data_dir, f'vocab.{src}-{tgt}')
 
         if os.path.isfile(joint_vocab_file):
             with open(joint_vocab_file) as f:
                 vocab = Vocabulary.from_json(f.read())
                 src_vocab = tgt_vocab = vocab
         else:
-            src_vocab_filename = os.path.join(data_dir, 'src_vocab.json')
+            src_vocab_filename = os.path.join(data_dir, f'vocab.{src}')
             with open(src_vocab_filename) as src_vocab_file:
                 src_vocab = Vocabulary.from_json(src_vocab_file.read())
 
-            tgt_vocab_filename = os.path.join(data_dir, 'tgt_vocab.json')
+            tgt_vocab_filename = os.path.join(data_dir, f'vocab.{tgt}')
             with open(tgt_vocab_filename) as tgt_vocab_file:
                 tgt_vocab = Vocabulary.from_json(tgt_vocab_file.read())
 
