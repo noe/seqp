@@ -82,8 +82,14 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser("Data preparation for fairseq+seqp")
-    parser.add_argument("--source", required=True)
-    parser.add_argument("--target", required=True)
+    parser.add_argument("-s", "--source-lang",
+                        required=True,
+                        metavar="SRC",
+                        help="source language")
+    parser.add_argument("-t", "--target-lang",
+                        required=True,
+                        metavar="TARGET",
+                        help="target language")
     parser.add_argument("--joined-dictionary", action="store_true")
     parser.add_argument("--trainpref", required=True)
     parser.add_argument("--validpref", required=True)
@@ -97,15 +103,17 @@ def main():
                 'test': args.testpref}
 
     src_vocab, tgt_vocab = _write_vocabs(args.trainpref,
-                                         args.source,
-                                         args.target,
+                                         args.source_lang,
+                                         args.target_lang,
                                          args.destdir,
                                          args.joined_dictionary)
 
     vocabs = {args.source: src_vocab, args.target:tgt_vocab}
 
+    os.makedirs(args.destdir, exist_ok=True)
+
     for split, prefix in prefixes.items():
-        for lang in [args.source, args.target]:
+        for lang in [args.source_lang, args.target_lang]:
             vocab = vocabs[lang]
             input_filename = f"{prefix}.{lang}"
             output_prefix = os.path.join(args.destdir, split)
