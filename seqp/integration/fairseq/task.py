@@ -84,17 +84,24 @@ class SeqpTranslationTask(TranslationTask):
 
         data_dir = args.data[0]
         joint_vocab_file = os.path.join(data_dir, f'vocab.{src}-{tgt}')
+        src_vocab_filename = os.path.join(data_dir, f'vocab.{src}')
+        tgt_vocab_filename = os.path.join(data_dir, f'vocab.{tgt}')
 
-        if os.path.isfile(joint_vocab_file):
+        joint_vocab_exists = os.path.isfile(joint_vocab_file)
+        individual_vocabs_exist = (os.path.isfile(src_vocab_filename)
+                                   and os.path.isfile(tgt_vocab_filename))
+        vocabs_exist = joint_vocab_exists or individual_vocabs_exist
+
+        assert vocabs_exist, f"No vocabs found in {data_dir}"
+
+        if joint_vocab_exists:
             with open(joint_vocab_file) as f:
                 vocab = Vocabulary.from_json(f.read())
                 src_vocab = tgt_vocab = vocab
         else:
-            src_vocab_filename = os.path.join(data_dir, f'vocab.{src}')
             with open(src_vocab_filename) as src_vocab_file:
                 src_vocab = Vocabulary.from_json(src_vocab_file.read())
 
-            tgt_vocab_filename = os.path.join(data_dir, f'vocab.{tgt}')
             with open(tgt_vocab_filename) as tgt_vocab_file:
                 tgt_vocab = Vocabulary.from_json(tgt_vocab_file.read())
 
