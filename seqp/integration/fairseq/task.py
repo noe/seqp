@@ -82,7 +82,7 @@ class SeqpTranslationTask(TranslationTask):
         src = args.source_lang
         tgt = args.target_lang
 
-        data_dir = args.data[0]
+        data_dir = args.data
         joint_vocab_file = os.path.join(data_dir, f'vocab.{src}-{tgt}')
         src_vocab_filename = os.path.join(data_dir, f'vocab.{src}')
         tgt_vocab_filename = os.path.join(data_dir, f'vocab.{tgt}')
