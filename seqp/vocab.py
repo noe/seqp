@@ -85,12 +85,33 @@ class Vocabulary(object):
         :param indent: indentation for the json.
         :return: Json string.
         """
-        state = {'pad_id': self.pad_id,
-                 'eos_id': self.eos_id,
-                 'unk_id': self.unk_id,
-                 'symbols': self.idx2symbol,
-                 }
-        return json.dumps(state, indent=indent)
+        return json.dumps(self.state_dict(), indent=indent)
+
+    def state_dict(self):
+        """
+        Returns a dictionary with the state of the vocabulary.
+        :return: A dictionary with the state of the vocabulary.
+        """
+        return {'pad_id': self.pad_id,
+                'eos_id': self.eos_id,
+                'unk_id': self.unk_id,
+                'symbols': self.idx2symbol,
+                }
+
+    @staticmethod
+    def from_state_dict(state: dict) -> 'Vocabulary':
+        """
+        Creates a vocabulary from its internal state dictionary.
+        :param state: Internal state dictionary.
+        :return: The reconstructed vocabulary object.
+        """
+        # To understand the return value type hint, take into account that we
+        # support Python 3.6 and read PEP 484:
+        # https://www.python.org/dev/peps/pep-0484/#forward-references
+        return Vocabulary(symbols=state['symbols'],
+                          pad_id=state['pad_id'],
+                          eos_id=state['eos_id'],
+                          unk_id=state['unk_id'],)
 
     @staticmethod
     def from_json(json_string: str) -> 'Vocabulary':
@@ -99,14 +120,10 @@ class Vocabulary(object):
         :param json_string: String with the internal state of the Vocabulary.
         :return: The reconstructed vocabulary object.
         """
-        # To understand the return value, take into account that we
+        # To understand the return value type hint, take into account that we
         # support Python 3.6 and read PEP 484:
         # https://www.python.org/dev/peps/pep-0484/#forward-references
-        state = json.loads(json_string)
-        return Vocabulary(symbols=state['symbols'],
-                          pad_id=state['pad_id'],
-                          eos_id=state['eos_id'],
-                          unk_id=state['unk_id'],)
+        return Vocabulary.from_state_dict(json.loads(json_string))
 
 
 class VocabularyCollector(object):
