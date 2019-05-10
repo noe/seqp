@@ -16,9 +16,10 @@ def count_lines(file_name: str) -> int:
     :return: The number of lines in the file.
     """
     with open(file_name) as f:
+        i = 0
         for i, l in enumerate(f):
             pass
-    return i + 1
+        return i + 1
 
 
 class EosAppender(RecordReader):
