@@ -55,7 +55,11 @@ class Hdf5RecordWriter(RecordWriter):
                 del self.hdf5_file[k]
 
             # add a dataset with the lengths of all sentences
-            meta_dataset = self.hdf5_file.create_dataset(k, (1,), dtype=meta_dtype)
+            meta_dataset = self.hdf5_file.create_dataset(k,
+                                                         (1,),
+                                                         dtype=meta_dtype,
+                                                         track_times=False,
+                                                         track_order=False)
             meta_dataset[0] = v
 
         if self.metadata:
@@ -102,10 +106,19 @@ class Hdf5RecordWriter(RecordWriter):
             # sentence did not match the needed criteria to be encoded (e.g. too long), so
             # we add an empty dataset
             # (see http://docs.h5py.org/en/stable/high/dataset.html#creating-and-reading-empty-or-null-datasets-and-attributes)
-            self.hdf5_file.create_dataset(internal_key, data=h5py.Empty("f"))
+            self.hdf5_file.create_dataset(internal_key,
+                                          data=h5py.Empty("f"),
+                                          track_times=False,
+                                          track_order=False)
             length = 0
         else:
-            self.hdf5_file.create_dataset(internal_key, record.shape, dtype=record.dtype, data=record)
+            self.hdf5_file.create_dataset(internal_key,
+                                          record.shape,
+                                          dtype=record.dtype,
+                                          data=record,
+                                          track_times=False,
+                                          track_order=False)
+
             length = record.shape[0]
 
         return length
