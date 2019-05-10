@@ -31,7 +31,7 @@ class SeqpTranslationTask(TranslationTask):
         if 'valid' in split and split[-1] == '1':
             raise FileNotFoundError
 
-        prefix = os.path.join(self.args.data[0],
+        prefix = os.path.join(self.args.data,
                               'train' if split == 'train' else
                               'valid' if 'valid' in split else
                               'test')
