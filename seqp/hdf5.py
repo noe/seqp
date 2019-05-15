@@ -58,8 +58,7 @@ class Hdf5RecordWriter(RecordWriter):
             meta_dataset = self.hdf5_file.create_dataset(k,
                                                          (1,),
                                                          dtype=meta_dtype,
-                                                         track_times=False,
-                                                         track_order=False)
+                                                         track_times=False)
             meta_dataset[0] = v
 
         if self.metadata:
@@ -108,16 +107,14 @@ class Hdf5RecordWriter(RecordWriter):
             # (see http://docs.h5py.org/en/stable/high/dataset.html#creating-and-reading-empty-or-null-datasets-and-attributes)
             self.hdf5_file.create_dataset(internal_key,
                                           data=h5py.Empty("f"),
-                                          track_times=False,
-                                          track_order=False)
+                                          track_times=False)
             length = 0
         else:
             self.hdf5_file.create_dataset(internal_key,
                                           record.shape,
                                           dtype=record.dtype,
                                           data=record,
-                                          track_times=False,
-                                          track_order=False)
+                                          track_times=False)
 
             length = record.shape[0]
 
