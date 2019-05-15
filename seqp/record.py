@@ -216,6 +216,7 @@ class ShardedWriter(RecordWriter):
         self.former_files = []
         first_output_file = self._file_name(initial_file_idx)
         self.current_writer = self._writer_for(first_output_file)
+        super().__init__(*args, **kwargs)
 
     def close(self):
         self.current_writer.close()
