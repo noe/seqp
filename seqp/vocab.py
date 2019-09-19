@@ -77,7 +77,8 @@ class Vocabulary(object):
         :return: Tokenized text (the length of this list may be less than the
                 original indexes list if some indexes are muted.
         """
-        return [self.idx2symbol[idx] for idx in indexes if idx not in muted_ids]
+        return [self.idx2symbol[idx] for idx in indexes
+                if not muted_ids or idx not in muted_ids]
 
     def to_json(self, indent: Optional[int]=None) -> str:
         """
