@@ -6,7 +6,7 @@
 
 from collections import Counter, defaultdict
 import json
-from typing import Iterable, List, Callable, Optional
+from typing import Callable, Iterable, List, Optional, Set
 
 from .encoding import TextCodec
 
@@ -53,7 +53,6 @@ class Vocabulary(object):
         self.unk_id = unk_id
         self.pad_id = pad_id
         self.eos_id = eos_id
-        self.muted_ids = [self.eos_id, self.pad_id]
 
     def encode(self, tokenized_text: Iterable[str], use_unk=False, add_eos=True)->List[int]:
         """
@@ -70,14 +69,15 @@ class Vocabulary(object):
                 for idx in (self.symbol2idx.get(s, unk_id) for s in tokenized_text)
                 if idx is not None] + eos_trail
 
-    def decode(self, indexes: Iterable[int]) -> List[str]:
+    def decode(self, indexes: Iterable[int], muted_ids: Set[int] = None) -> List[str]:
         """
         Decodes a list of token IDs into the associated tokens.
         :param indexes: token IDs to decode.
-        :return: Tokenized text.
+        :param muted_ids: tokens that should generate nothing.
+        :return: Tokenized text (the length of this list may be less than the
+                original indexes list if some indexes are muted.
         """
-        return [self.idx2symbol[idx] if idx not in self.muted_ids else ""
-                for idx in indexes]
+        return [self.idx2symbol[idx] for idx in indexes if idx not in muted_ids]
 
     def to_json(self, indent: Optional[int]=None) -> str:
         """
