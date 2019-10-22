@@ -165,8 +165,13 @@ class VocabularyCollector(object):
                             is not important.
         :return: The resulting Vocabulary.
         """
-        counter = Counter(self.symbol_count)
         special_symbols = [pad_symbol, eos_symbol, unk_symbol]
+
+        for s in special_symbols:
+            assert s not in self.symbol_count, \
+                f"Special symbol {s} was added as symbol"
+
+        counter = Counter(self.symbol_count)
         num_symbols = (None if max_num_symbols is None
                        else max_num_symbols - len(special_symbols))
         most_common_symbols = counter.most_common(num_symbols)
