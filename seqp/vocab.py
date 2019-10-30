@@ -80,13 +80,13 @@ class Vocabulary(object):
         return [self.idx2symbol[idx] for idx in indexes
                 if not muted_ids or idx not in muted_ids]
 
-    def to_json(self, indent: Optional[int]=None) -> str:
+    def to_json(self, indent: Optional[int] = None) -> str:
         """
         Creates a json string with the internal state of the vocabulary.
         :param indent: indentation for the json.
         :return: Json string.
         """
-        return json.dumps(self.state_dict(), indent=indent)
+        return json.dumps(self.state_dict(), indent=indent, ensure_ascii=False)
 
     def state_dict(self):
         """
