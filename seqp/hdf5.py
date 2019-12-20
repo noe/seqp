@@ -191,8 +191,7 @@ class _ContiguousIndexing:
         return self.final_index - self.initial_index + 1
 
     def metadata(self, metadata_key) -> Optional[str]:
-        last_file = self.file_names[-1]
-        last_hdf5_store: h5py.File = self.hdf5_stores[last_file]
+        last_hdf5_store: h5py.File = self.hdf5_stores[-1]
         return str(last_hdf5_store[metadata_key][0])
 
     def close(self):
