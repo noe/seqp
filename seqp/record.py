@@ -113,17 +113,20 @@ class RecordWriter:
     def __init__(self,
                  fields: Optional[Iterable[str]]=None,
                  sequence_field: str = None,
-                 append: bool = False):
+                 append: bool = False,
+                 initial_index: int = 1):
         """
         Constructor.
         :param fields: Optional fields for the records to write
         :param sequence_field: field containing the sequence itself (it
                will be used to compute the sequence length).
         :param append: whether to append or overwrite.
+        :param initial_index: initial record index for the writer.
         """
         self.metadata = dict()
         self.fields = fields
         self.append = append
+        self.next_index = initial_index
         self.sequence_field = sequence_field
         if fields or sequence_field:
             assert fields and sequence_field
@@ -162,16 +165,16 @@ class RecordWriter:
         """
         self.metadata.update(metadata)
 
-    def write(self, idx: int,
-              record: Optional[Union[np.ndarray, Dict[str, np.ndarray]]],
-              ) -> None:
+    def write(self,
+              record: Union[np.ndarray, Dict[str, np.ndarray]],
+              ) -> int:
         """
         Writes a record to the underlying storage.
         :param idx: Index of the record. Must be unique.
         :param record: Record to be stored, or dictionary with
                records (dictionary keys must match fields provided in
                the constructor).
-        :return: None
+        :return: index of the just written record.
         """
         raise NotImplementedError
 
@@ -224,10 +227,11 @@ class ShardedWriter(RecordWriter):
     def _file_name(self, file_idx) -> str:
         return self.output_file_template.format(file_idx)
 
-    def _writer_for(self, shard_name, **extra_kwags) -> RecordWriter:
+    def _writer_for(self, shard_name, initial_index, **extra_kwags) -> RecordWriter:
         args = list(self.args)
         kwargs = dict(self.kwargs)
         kwargs.update(extra_kwags)
+        kwargs['initial_index'] = initial_index
 
         if isinstance(self.output_file_param, int):
             args.insert(self.output_file_param, shard_name)
@@ -236,22 +240,24 @@ class ShardedWriter(RecordWriter):
 
         return self.writer_class(*args, **kwargs)
 
-    def _next_writer(self) -> None:
+    def _next_writer(self, initial_index) -> None:
         self.former_files.append(self._file_name(self.current_output_file_idx))
         self.current_writer.close()
         self.current_records = 0
         self.current_output_file_idx += 1
         shard_name = self._file_name(self.current_output_file_idx)
-        self.current_writer = self._writer_for(shard_name)
+        self.current_writer = self._writer_for(shard_name, initial_index)
         self.current_writer.add_metadata(self.metadata)
 
-    def write(self, idx: int,
-              record: Optional[Union[np.ndarray, Dict[str, np.ndarray]]],
-              ) -> None:
+    def write(self,
+              record: Union[np.ndarray, Dict[str, np.ndarray]],
+              ) -> int:
         if self.current_records >= self.max_records_per_shard:
-            self._next_writer()
-        self.current_writer.write(idx, record)
+            initial_index = 1 if self.current_writer is None else self.current_writer.next_index
+            self._next_writer(initial_index)
+        idx = self.current_writer.write(record)
         self.current_records += 1
+        return idx
 
     def add_metadata(self, metadata: Dict[str, str]) -> None:
         self.current_writer.add_metadata(metadata)
