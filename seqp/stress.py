@@ -1,7 +1,6 @@
 import argparse
 from glob import glob
 import numpy as np
-from seqp.record import RecordReader, RecordWriter
 from seqp.hdf5 import Hdf5RecordWriter, Hdf5RecordReader
 from seqp.record import ShardedWriter
 from tqdm import tqdm
@@ -20,7 +19,7 @@ BLACKLIST = type, ModuleType, FunctionType
 def get_size(obj):
     """sum size of object & members."""
     if isinstance(obj, BLACKLIST):
-        raise TypeError('getsize() does not take argument of type: '+ str(type(obj)))
+        raise TypeError('getsize() does not take argument of type: ' + str(type(obj)))
     seen_ids = set()
     size = 0
     objects = [obj]
@@ -37,7 +36,8 @@ def get_size(obj):
 
 def load():
     #files = glob('/tmp/paco_seqp/test_*.hdf5')
-    files = ['/tmp/paco_seqp/test_{}.hdf5'.format(k) for k in range(1, 54)]
+    files = ['/tmp/paco_seqp/test_{}.hdf5'.format(k) for k in range(1, 27)]
+    #files = ['/tmp/paco_seqp/test_{}.hdf5'.format(k) for k in [1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]]
 
     start_time = timer()
     with Hdf5RecordReader(files) as reader:
@@ -48,13 +48,17 @@ def load():
         print("Load time: {}".format(timedelta(seconds=end_time - start_time)))
         print("Reader size: {} Mb".format(size // 1000000))
 
+        idx = 2000000
+        r = reader.retrieve(idx)
+        print(f"Record {idx} is {r}")
+
 
 def save():
     # parser = argparse.ArgumentParser()
     # parser.add_argument('')
     seq_length = 5
     num_fields = 5
-    num_segments = 20000000
+    num_segments = 8000000
     output_file_template = "/tmp/paco_seqp/test_{}.hdf5"
     fields = ['field_{}'.format(k) for k in range(num_fields)]
     with ShardedWriter(Hdf5RecordWriter,
@@ -63,7 +67,8 @@ def save():
                        fields=fields,
                        sequence_field=fields[0]) as writer:
         for idx in tqdm(range(num_segments)):
-            writer.write(idx, {f: np.random.randint(32000, size=seq_length) for f in fields})
+            k = (idx + 1) % 12347
+            writer.write({f: k * np.ones(seq_length, dtype=np.int16) for f in fields})
 
 
 if __name__ == '__main__':
