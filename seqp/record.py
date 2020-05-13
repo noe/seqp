@@ -114,7 +114,7 @@ class RecordWriter:
                  fields: Optional[Iterable[str]]=None,
                  sequence_field: str = None,
                  append: bool = False,
-                 initial_index: int = 1):
+                 initial_index: int = 0):
         """
         Constructor.
         :param fields: Optional fields for the records to write
@@ -218,7 +218,7 @@ class ShardedWriter(RecordWriter):
         self.current_records = 0
         self.former_files = []
         first_output_file = self._file_name(initial_file_idx)
-        initial_index = 1
+        initial_index = 0
         self.current_writer = self._writer_for(first_output_file, initial_index)
         super().__init__(*args, **kwargs)
 

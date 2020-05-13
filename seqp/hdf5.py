@@ -34,7 +34,7 @@ class Hdf5RecordWriter(RecordWriter):
                  fields: Iterable[str] = None,
                  sequence_field: str = None,
                  append: bool = False,
-                 initial_index: int = 1):
+                 initial_index: int = 0):
         super().__init__(fields=fields, sequence_field=sequence_field, append=append)
 
         if fields is not None or sequence_field is not None:
@@ -292,7 +292,7 @@ class Hdf5RecordReader(RecordReader):
         if isinstance(file_names, str):
             file_names = [file_names]
 
-        hdf5_stores = {file_name: h5py.File(file_name, 'r')
+        hdf5_stores = {file_name: h5py.File(file_name, 'r', libver='latest', swmr=True)
                        for file_name in file_names}
 
         lengths = dict()
