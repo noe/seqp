@@ -77,7 +77,7 @@ def write_records(sentences: Iterable[str],
         sentence = sentence.strip("\r\n ")
         tokens = codec.tokenize(sentence)
         encoded = codec.encode(tokens)
-        writer.write(idx, encoded)
+        writer.write(encoded)
         if progress is not None:
             progress()
 
@@ -94,18 +94,17 @@ def main():
     output_file_template = args.output + "_{:05d}.hdf5"
     embedder = BertInterface(use_gpu=True)
 
-    writer = ShardedWriter(Hdf5RecordWriter, output_file_template, args.max_records)
+    with ShardedWriter(Hdf5RecordWriter, output_file_template, args.max_records) as writer:
+        if args.input:
+            total_sentences = count_lines(args.input)
+            with open(args.input, 'r') as input_sentences:
+                with tqdm.tqdm(total=total_sentences, ncols=100, leave=False, unit='segments') as pbar:
+                    def progress():
+                        pbar.update(1)
 
-    if args.input:
-        total_sentences = count_lines(args.input)
-        with open(args.input, 'r') as input_sentences:
-            with tqdm.tqdm(total=total_sentences, ncols=100, leave=False, unit='segments') as pbar:
-                def progress():
-                    pbar.update(1)
-
-                write_records(input_sentences, embedder, writer, progress)
-    else:
-        write_records(sys.stdin, embedder, writer)
+                    write_records(input_sentences, embedder, writer, progress)
+        else:
+            write_records(sys.stdin, embedder, writer)
 
 
 if __name__ == '__main__':
