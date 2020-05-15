@@ -267,5 +267,5 @@ class ShardedWriter(RecordWriter):
 
     def _update_metadata_in_previous_files(self) -> None:
         for former_file in self.former_files:
-            with self._writer_for(former_file, append=True) as writer:
+            with self._writer_for(former_file, None, append=True) as writer:
                 writer.add_metadata(self.metadata)
