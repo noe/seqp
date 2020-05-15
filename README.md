@@ -49,8 +49,30 @@ every time.
 format and load them back in length-bucketed batches.
 See the [DNA example](./examples/sharded_storage.ipynb).
 
+# Quick example
 
-# Examples
+This snippet shows how to serialize sequences in shards of 100000:
+
+```Python
+output_file_template = "data_{:02d}.hdf5"
+
+with ShardedWriter(Hdf5RecordWriter,
+                   output_file_template,
+                   max_records_per_shard=100000) as writer:
+    for seq in sequences:
+        binarized_seq = binarize_sequence(seq)
+        writer.write(np.array(binarized_seq, dtype=np.uint32))
+```
+
+And this one shows how to read them back:
+
+```Python
+with Hdf5RecordReader(glob('data_*.hdf5')) as reader:
+    for seq_idx in reader.indexes():
+        binarized_seq = reader.retrieve(seq_idx)
+```
+
+# Complete examples
 
 `seqp` offers several jupyter notebooks with usage examples:
 
