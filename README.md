@@ -74,22 +74,6 @@ persistence:
 If your deep learning library is just another component in your pipeline
 and you don't want to couple all the pipeline to it, `seqp` is for you.
 
-# Citation
-
-If you make use of `seqp` in your publication, please cite
-it as follows:
-
-```
-@misc{casas2019seqp,
-  author    = {Noe Casas},
-  title     = {seqp}
-  version   = {0.1},
-  month     = march,
-  year      = 2019,
-  doi       = {TODO/zenodo.TODO},
-  url       = {https://github.com/noe/seqp/}
-}
-```
 
 # FAQ
 
