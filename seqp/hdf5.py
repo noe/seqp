@@ -40,10 +40,13 @@ class Hdf5RecordWriter(RecordWriter):
         if fields is not None or sequence_field is not None:
             assert fields is not None and sequence_field is not None
             assert sequence_field in fields
-        self.initial_index = initial_index
-        self.next_index = initial_index
+
         self.output_file = output_file
         self.hdf5_file = h5py.File(output_file, 'a' if append else 'w')
+        self.initial_index = (initial_index if not append
+                              else int(self.hdf5_file[_INITIAL_INDEX_KEY][0]))
+        self.next_index = (initial_index if not append
+                           else 1 + int(self.hdf5_file[_FINAL_INDEX_KEY][0]))
         self.lengths = ([] if not append
                         else json.loads(self.hdf5_file[_LENGTHS_KEY][0]))
         if append and fields is not None:
