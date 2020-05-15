@@ -53,8 +53,7 @@ See the [DNA example](./examples/sharded_storage.ipynb).
 - [Sharded storage of DNA data](./examples/sharded_storage.ipynb)
 - [Sharded storage of BERT representations](./examples/bert.ipynb)
 - [Reading records in batches, bucketing by sequence length](./examples/data_load.ipynb)
-- [Integration with bare pytorch](./examples/integration_pytorch.ipynb)
-- [Integration with fairseq](./examples/integration_fairseq.ipynb)
+
 
 Also, `seqp` offers some very simple command line tools that can
 serve as usage examples:
