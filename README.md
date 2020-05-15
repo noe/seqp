@@ -6,6 +6,12 @@ This library is for you if you want to encode text (or any
  other discrete sequential data) in binary form, persist
  it to file and then load it back (e.g. to
  train a machine learning model).
+ 
+You can install it with:
+ 
+```
+pip install https://github.com/noe/seqp/archive/0.1.tar.gz
+```
 
 
 # Features
