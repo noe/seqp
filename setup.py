@@ -7,7 +7,7 @@
 from setuptools import setup, find_packages
 
 setup(name="seqp",
-      version="0.0.1",
+      version="0.1",
       author="Noe Casas",
       author_email="contact@noecasas.com",
       description="Sequence persistence library",
@@ -30,6 +30,7 @@ setup(name="seqp",
           'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
           'Topic :: Scientific/Engineering :: Artificial Intelligence',
           'Topic :: Text Processing',
       ],
