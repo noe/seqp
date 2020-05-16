@@ -10,7 +10,7 @@ This library is for you if you want to encode text (or any
 You can install it with:
  
 ```
-pip install https://github.com/noe/seqp/archive/0.1.tar.gz
+pip install seqp
 ```
 
 
